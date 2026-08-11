@@ -1,8 +1,20 @@
-# Price Challenge
+# Price Challenge v1.1
 
 A classroom-friendly price guessing game inspired by classic TV game mechanics. Create 2–4 teams, add product photos and actual prices, give each team a timed private turn to submit a bid, and automatically award the point to the closest bid without going over.
 
-## Features
+## What's new in v1.1
+
+- Bigger, more TV-friendly score cards during gameplay
+- Circular animated countdown timer plus the original timer bar
+- Yellow warning state at 10 seconds and a dramatic red **HURRY!** state for the last 5 seconds
+- Distinct sound cues for timer start, lock-in, time-up, price reveal, and winner
+- A short dramatic “And the actual price is…” reveal before the price appears
+- Winner animations and confetti after each winning round
+- Enhanced final-results celebration and champion display
+- Collapsible **Host Controls** during gameplay so edit/sound controls stay out of the children's way
+- Reduced-motion support for people who prefer less animation
+
+## Core features
 
 - 2–4 customizable teams
 - Team names and colors
@@ -16,9 +28,21 @@ A classroom-friendly price guessing game inspired by classic TV game mechanics. 
 - Running scoreboard
 - Reusable saved games stored in IndexedDB
 - JSON export/import for backups and moving games between devices
-- Optional timer/reveal sound effects
+- Optional sound effects
 - Responsive layout for laptops, tablets, projectors, and TVs
 - No server, database account, build step, or paid hosting required
+
+## Updating an existing GitHub Pages copy
+
+If you already have Price Challenge on GitHub, replace these three files in the root of the repository with the v1.1 copies:
+
+- `index.html`
+- `styles.css`
+- `app.js`
+
+You can also replace `README.md` if you want the repository documentation updated. Your existing **Deploy from a branch → main → / (root)** GitHub Pages setting can stay exactly as it is.
+
+Your saved games are stored in the browser, so updating the website files does not normally remove them. Exporting important games as JSON before a major update is still a good backup habit.
 
 ## Run it locally
 
@@ -56,6 +80,12 @@ Each team gets its own full countdown.
 5. Their bid is hidden and the app moves to the next team.
 6. If the timer reaches zero, that team receives **No Bid** for the round.
 7. After all teams are done, the host presses **Reveal Price**.
+
+The timer changes to a warning style with 10 seconds remaining, then enters a more noticeable final-five-seconds state.
+
+## Host Controls
+
+During gameplay, setup controls are hidden behind the **Host Controls** button in the top-right corner. Opening the host panel gives you access to the sound toggle and **Edit Game** without leaving those controls exposed all the time.
 
 ## Data/privacy notes
 

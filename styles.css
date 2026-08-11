@@ -295,3 +295,262 @@ input[type="file"] { max-width: 100%; }
   .result-row { grid-template-columns: 1fr auto; }
   .result-note { grid-column: 1 / -1; }
 }
+
+/* ===== Price Challenge v1.1 game-show polish ===== */
+.host-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: -8px 0 18px;
+  padding: 12px 14px;
+  border: 1px dashed #c7d0df;
+  border-radius: 14px;
+  background: rgba(255,255,255,.82);
+}
+.host-controls > div:first-child { display: grid; gap: 2px; }
+.host-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.host-button { white-space: nowrap; }
+
+.scoreboard { gap: 12px; }
+.score-card {
+  min-height: 118px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  align-content: center;
+  padding: 16px;
+  transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.score-card .team-color-strip {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 6px;
+  background: var(--team-color);
+}
+.score-card .name { font-size: 1.02rem; margin-top: 3px; }
+.score-card .score { font-size: clamp(2rem, 5vw, 2.6rem); line-height: 1; align-self: center; padding: 6px 0; }
+.score-card.active { transform: translateY(-2px); }
+.score-card.round-winner {
+  background: color-mix(in srgb, var(--team-color) 8%, white);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--team-color) 20%, transparent), 0 12px 30px rgba(35,45,75,.12);
+  animation: winnerCardPop .62s ease both;
+}
+
+.turn-panel {
+  position: relative;
+  overflow: hidden;
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.turn-panel.warning {
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--border));
+}
+.turn-panel.danger {
+  border-color: color-mix(in srgb, var(--danger) 60%, var(--border));
+  box-shadow: 0 12px 34px rgba(194,58,70,.14);
+}
+
+.timer-shell {
+  --timer-progress: 100;
+  width: min(230px, 72vw);
+  aspect-ratio: 1;
+  margin: 6px auto 10px;
+  display: grid;
+  place-items: center;
+}
+.timer-ring {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  background: conic-gradient(var(--primary) calc(var(--timer-progress) * 1%), #e5eaf2 0);
+  position: relative;
+  transition: background .2s linear, transform .2s ease;
+}
+.timer-ring::before {
+  content: '';
+  position: absolute;
+  inset: 12px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.timer-shell.warning .timer-ring {
+  background: conic-gradient(var(--warning) calc(var(--timer-progress) * 1%), #f2e8d8 0);
+}
+.timer-shell.danger .timer-ring {
+  background: conic-gradient(var(--danger) calc(var(--timer-progress) * 1%), #f4dfe2 0);
+  animation: timerUrgent .58s ease-in-out infinite alternate;
+}
+.timer-shell .timer,
+.timer-shell .timer-label { position: relative; z-index: 1; }
+.timer-shell .timer { margin: 0; font-size: clamp(3.3rem, 11vw, 5.5rem); }
+.timer-label { color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: .12em; font-size: .7rem; }
+.timer-bar > div { background: var(--primary); }
+.turn-panel.warning .timer-bar > div { background: var(--warning); }
+.turn-panel.danger .timer-bar > div { background: var(--danger); }
+
+.hurry-label {
+  height: 0;
+  overflow: hidden;
+  opacity: 0;
+  color: var(--danger);
+  font-weight: 950;
+  letter-spacing: .14em;
+  transition: opacity .16s ease, height .16s ease;
+}
+.hurry-label.show {
+  height: 28px;
+  opacity: 1;
+  animation: hurryFlash .52s ease-in-out infinite alternate;
+}
+
+.game-show-button,
+.reveal-button,
+.lock-button {
+  box-shadow: 0 8px 18px rgba(79,70,229,.16);
+}
+.lock-button { box-shadow: 0 8px 18px rgba(22,138,88,.18); }
+.reveal-button { min-width: 190px; }
+
+.dramatic-reveal {
+  min-height: 360px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 14px;
+  padding: 22px 8px;
+  background: radial-gradient(circle at center, rgba(79,70,229,.13), transparent 64%);
+  border-radius: 16px;
+  animation: revealStageIn .35s ease both;
+}
+.reveal-spark { font-size: 2.8rem; animation: sparkleSpin 1.2s ease-in-out infinite; }
+.mystery-price {
+  font-size: clamp(2.4rem, 9vw, 4.4rem);
+  font-weight: 950;
+  letter-spacing: .04em;
+  color: var(--primary);
+  animation: mysteryPulse .65s ease-in-out infinite alternate;
+}
+.reveal-dots { display: flex; gap: 8px; }
+.reveal-dots span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--primary);
+  animation: dotBounce .75s ease-in-out infinite alternate;
+}
+.reveal-dots span:nth-child(2) { animation-delay: .13s; }
+.reveal-dots span:nth-child(3) { animation-delay: .26s; }
+
+.reveal-results { animation: revealResultsIn .55s cubic-bezier(.2,.8,.2,1) both; }
+.reveal-price {
+  text-shadow: 0 6px 20px rgba(22,138,88,.14);
+  animation: pricePop .7s cubic-bezier(.2,1.3,.4,1) both;
+}
+.winner-banner.celebrate {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(22,138,88,.22);
+  animation: bannerPop .55s .12s ease both;
+}
+.result-row.winner {
+  border-width: 2px;
+  border-color: var(--team-color, var(--success));
+  background: color-mix(in srgb, var(--team-color, var(--success)) 8%, white);
+  animation: winnerRowIn .5s .2s ease both;
+}
+
+.finale-kicker {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--primary-dark);
+  font-weight: 950;
+  font-size: .8rem;
+  letter-spacing: .14em;
+}
+.end-screen .trophy {
+  margin-top: 10px;
+  animation: trophyBounce 1s cubic-bezier(.2,1.3,.4,1) both;
+}
+.end-screen h2 { font-size: clamp(1.8rem, 5vw, 3rem); margin-bottom: 8px; }
+.final-row {
+  position: relative;
+  overflow: hidden;
+  border-left: 6px solid var(--team-color, var(--border));
+  background: #fff;
+}
+.final-row.champion-row {
+  border-color: var(--team-color, var(--success));
+  background: color-mix(in srgb, var(--team-color, var(--success)) 8%, white);
+  transform: scale(1.02);
+  box-shadow: 0 10px 24px rgba(35,45,75,.1);
+}
+.final-team { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.final-medal { font-size: 1.45rem; }
+
+.confetti-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  overflow: hidden;
+  pointer-events: none;
+}
+.confetti-piece {
+  position: absolute;
+  top: -30px;
+  font-weight: 900;
+  animation-name: confettiFall;
+  animation-timing-function: cubic-bezier(.18,.78,.34,1);
+  animation-fill-mode: forwards;
+}
+
+@keyframes winnerCardPop {
+  0% { transform: scale(.96); }
+  60% { transform: scale(1.035); }
+  100% { transform: scale(1); }
+}
+@keyframes timerUrgent {
+  from { transform: scale(1); }
+  to { transform: scale(1.035); }
+}
+@keyframes hurryFlash { from { opacity: .55; } to { opacity: 1; } }
+@keyframes revealStageIn { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: scale(1); } }
+@keyframes sparkleSpin { 50% { transform: rotate(18deg) scale(1.16); } }
+@keyframes mysteryPulse { from { transform: scale(.98); opacity: .72; } to { transform: scale(1.04); opacity: 1; } }
+@keyframes dotBounce { from { transform: translateY(0); opacity: .45; } to { transform: translateY(-9px); opacity: 1; } }
+@keyframes revealResultsIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pricePop { 0% { opacity: 0; transform: scale(.55) rotate(-2deg); } 70% { transform: scale(1.08) rotate(1deg); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes bannerPop { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+@keyframes winnerRowIn { from { opacity: .25; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes trophyBounce { 0% { opacity: 0; transform: translateY(-20px) scale(.65) rotate(-10deg); } 65% { transform: translateY(4px) scale(1.12) rotate(4deg); } 100% { opacity: 1; transform: none; } }
+@keyframes confettiFall {
+  0% { transform: translate3d(0,-20px,0) rotate(0deg); opacity: 1; }
+  100% { transform: translate3d(var(--drift),110vh,0) rotate(760deg); opacity: .9; }
+}
+
+@media (max-width: 850px) {
+  .score-card { min-height: 105px; }
+  .host-controls { align-items: stretch; flex-direction: column; }
+  .host-actions { justify-content: flex-start; }
+}
+
+@media (max-width: 560px) {
+  .score-card { min-height: 96px; padding: 13px; }
+  .score-card .score { font-size: 2rem; }
+  .timer-shell { width: min(200px, 68vw); }
+  .dramatic-reveal { min-height: 300px; }
+  .final-row.champion-row { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .001ms !important;
+  }
+}

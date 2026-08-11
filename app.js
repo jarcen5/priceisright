@@ -28,7 +28,9 @@
     timerId: null,
     editItemId: null,
     scoredRound: false,
-    savedGames: []
+    savedGames: [],
+    hostControlsOpen: false,
+    revealTimerId: null
   };
 
   const app = document.getElementById('app');
@@ -65,15 +67,35 @@
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       const ctx = new AudioCtx();
-      const oscillator = ctx.createOscillator();
-      const gain = ctx.createGain();
-      oscillator.connect(gain);
-      gain.connect(ctx.destination);
-      oscillator.frequency.value = kind === 'urgent' ? 740 : kind === 'win' ? 880 : 520;
-      gain.gain.value = 0.05;
-      oscillator.start();
-      oscillator.stop(ctx.currentTime + (kind === 'win' ? 0.22 : 0.09));
-      oscillator.onended = () => ctx.close();
+      const master = ctx.createGain();
+      master.gain.value = 0.055;
+      master.connect(ctx.destination);
+
+      const tones = {
+        normal: [[520, 0, .08]],
+        start: [[480, 0, .08], [620, .09, .09]],
+        lock: [[620, 0, .07], [820, .08, .1]],
+        urgent: [[760, 0, .07]],
+        timeup: [[320, 0, .12], [240, .14, .18]],
+        reveal: [[440, 0, .09], [560, .1, .09], [700, .2, .16]],
+        win: [[660, 0, .11], [820, .12, .11], [990, .24, .24]]
+      };
+      const sequence = tones[kind] || tones.normal;
+      let endAt = 0;
+      sequence.forEach(([frequency, delay, duration]) => {
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.value = frequency;
+        gain.gain.setValueAtTime(1, ctx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(.01, ctx.currentTime + delay + duration);
+        oscillator.connect(gain);
+        gain.connect(master);
+        oscillator.start(ctx.currentTime + delay);
+        oscillator.stop(ctx.currentTime + delay + duration);
+        endAt = Math.max(endAt, delay + duration);
+      });
+      setTimeout(() => ctx.close(), Math.ceil((endAt + .1) * 1000));
     } catch (_) {}
   }
 
@@ -97,7 +119,8 @@
       sound: state.game.sound,
       teams: state.game.teams.map(({ id, name, color }) => ({ id, name, color }))
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(safe));
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(safe)); }
+    catch (_) {}
   }
 
   function loadSettings() {
@@ -225,6 +248,7 @@
     app.innerHTML = `
       <main class="app-shell">
         ${renderTopbar()}
+        ${state.screen !== 'setup' && state.hostControlsOpen ? renderHostControls() : ''}
         ${state.screen === 'setup' ? renderSetup() : ''}
         ${state.screen === 'game' ? renderGame() : ''}
         ${state.screen === 'end' ? renderEnd() : ''}
@@ -244,10 +268,26 @@
           </div>
         </div>
         <div class="top-actions">
-          ${state.screen !== 'setup' ? '<button class="ghost" data-action="back-setup">Edit Game</button>' : ''}
-          <button class="ghost" data-action="toggle-sound">${state.game.sound ? '🔊 Sound On' : '🔇 Sound Off'}</button>
+          ${state.screen === 'setup'
+            ? `<button class="ghost" data-action="toggle-sound">${state.game.sound ? '🔊 Sound On' : '🔇 Sound Off'}</button>`
+            : `<button class="ghost host-button" data-action="toggle-host">🎛️ ${state.hostControlsOpen ? 'Hide Host' : 'Host Controls'}</button>`}
         </div>
       </header>
+    `;
+  }
+
+  function renderHostControls() {
+    return `
+      <section class="host-controls" aria-label="Host controls">
+        <div>
+          <strong>🎛️ Host Controls</strong>
+          <span class="helper">Keep this panel closed while teams are playing.</span>
+        </div>
+        <div class="host-actions">
+          <button class="ghost" data-action="toggle-sound">${state.game.sound ? '🔊 Sound On' : '🔇 Sound Off'}</button>
+          <button data-action="back-setup">✏️ Edit Game</button>
+        </div>
+      </section>
     `;
   }
 
@@ -354,16 +394,22 @@
 
   function renderScoreboard() {
     const currentTeam = state.game.teams[state.turnIndex];
+    const item = state.game.items[state.roundIndex];
+    const roundWinners = state.turnStatus === 'revealed' && item ? getRoundResults(item).winners : [];
     return `
       <section class="scoreboard" aria-label="Scoreboard">
         ${state.game.teams.map(team => {
           const bid = state.bids[team.id];
+          const isRoundWinner = roundWinners.includes(team.id);
           let status = 'Waiting';
-          if (bid?.timedOut) status = 'No bid';
+          if (isRoundWinner) status = '🏆 Round winner';
+          else if (bid?.timedOut) status = 'No bid';
           else if (bid?.locked) status = '🔒 Locked';
-          else if (team.id === currentTeam?.id && state.turnStatus !== 'complete' && state.turnStatus !== 'revealed') status = 'Your turn';
+          else if (team.id === currentTeam?.id && !['complete','revealing','revealed'].includes(state.turnStatus)) status = 'Your turn';
+          const active = team.id === currentTeam?.id && !['complete','revealing','revealed'].includes(state.turnStatus);
           return `
-            <div class="score-card ${team.id === currentTeam?.id && state.turnStatus !== 'complete' && state.turnStatus !== 'revealed' ? 'active' : ''}" style="--team-color:${team.color}">
+            <div class="score-card ${active ? 'active' : ''} ${isRoundWinner ? 'round-winner' : ''}" style="--team-color:${team.color}">
+              <div class="team-color-strip"></div>
               <div class="name">${escapeHtml(team.name)}</div>
               <div class="score">${team.score}</div>
               <div class="status">${status}</div>
@@ -379,10 +425,11 @@
     if (!item) return renderEnd();
     const team = state.game.teams[state.turnIndex];
     const percent = Math.max(0, Math.min(100, (state.remaining / state.game.timerSeconds) * 100));
+    const timerClass = state.remaining <= 5 ? 'danger' : state.remaining <= 10 ? 'warning' : '';
 
     return `
       ${renderScoreboard()}
-      <section class="game-layout">
+      <section class="game-layout ${state.turnStatus === 'revealed' ? 'has-reveal' : ''}">
         <div class="card product-stage">
           <div class="round-kicker">Round ${state.roundIndex + 1} of ${state.game.items.length}</div>
           <h2>${escapeHtml(item.name)}</h2>
@@ -390,25 +437,32 @@
           <p class="helper" style="margin-top:14px">Guess the retail price. Closest bid without going over wins 1 point.</p>
         </div>
 
-        <aside class="card turn-panel">
+        <aside class="card turn-panel ${timerClass}">
           ${state.turnStatus === 'ready' ? `
             <div class="ready-box">
               <div class="pass-icon">🤲</div>
+              <div class="round-kicker">Next up</div>
               <h2>Pass to ${escapeHtml(team.name)}</h2>
               <div class="turn-team" style="--team-color:${team.color}"><span class="team-dot"></span>${escapeHtml(team.name)}</div>
-              <p class="helper">Your ${state.game.timerSeconds}-second timer will start when you press the button. Other teams: look away!</p>
-              <button class="primary big" data-action="start-turn">Start My Timer</button>
+              <p class="helper">Your ${state.game.timerSeconds}-second timer starts only when you press the button. Other teams: look away!</p>
+              <button class="primary big game-show-button" data-action="start-turn">Start My Timer</button>
             </div>
           ` : ''}
 
           ${state.turnStatus === 'bidding' ? `
             <div class="turn-team" style="--team-color:${team.color}"><span class="team-dot"></span>${escapeHtml(team.name)}</div>
-            <div class="timer ${state.remaining <= 5 ? 'danger' : state.remaining <= 10 ? 'warning' : ''}" aria-live="polite">${state.remaining}</div>
+            <div class="timer-shell ${timerClass}" style="--timer-progress:${percent}">
+              <div class="timer-ring">
+                <div class="timer ${timerClass}" aria-live="polite">${state.remaining}</div>
+                <div class="timer-label">seconds</div>
+              </div>
+            </div>
             <div class="timer-bar"><div style="width:${percent}%"></div></div>
+            <div class="hurry-label ${state.remaining <= 5 ? 'show' : ''}" aria-hidden="true">HURRY!</div>
             <div class="bid-wrap">
               <label for="bid-input">Your bid</label>
               <div class="currency-input"><span>$</span><input id="bid-input" type="number" min="0" step="0.01" inputmode="decimal" autocomplete="off" placeholder="0.00" /></div>
-              <button class="success big" style="width:100%;margin-top:12px" data-action="lock-bid">🔒 Lock In</button>
+              <button class="success big lock-button" style="width:100%;margin-top:12px" data-action="lock-bid">🔒 Lock In</button>
             </div>
             <p class="helper">Once locked, your bid is hidden and cannot be changed.</p>
           ` : ''}
@@ -418,13 +472,22 @@
               <div class="pass-icon">✅</div>
               <h2>All teams are locked!</h2>
               <p class="helper">Bids stay hidden until you reveal the actual price.</p>
-              <button class="primary big" data-action="reveal-price">Reveal Price</button>
+              <button class="primary big reveal-button" data-action="reveal-price">✨ Reveal Price</button>
+            </div>
+          ` : ''}
+
+          ${state.turnStatus === 'revealing' ? `
+            <div class="dramatic-reveal" aria-live="assertive">
+              <div class="reveal-spark">✨</div>
+              <div class="round-kicker">And the actual price is…</div>
+              <div class="mystery-price">$ ? ? ?</div>
+              <div class="reveal-dots"><span></span><span></span><span></span></div>
             </div>
           ` : ''}
 
           ${state.turnStatus === 'revealed' ? renderReveal(item) : ''}
 
-          ${state.turnStatus !== 'revealed' ? `
+          ${!['revealed','revealing'].includes(state.turnStatus) ? `
             <div class="locked-grid">
               ${state.game.teams.map(t => {
                 const b = state.bids[t.id];
@@ -456,31 +519,33 @@
     if (winnerNames.length > 1) banner = `🏆 Tie! ${winnerNames.map(escapeHtml).join(' & ')} each get a point.`;
 
     return `
-      <div class="round-kicker">Actual Price</div>
-      <div class="reveal-price">${money(item.price)}</div>
-      <div class="winner-banner">${banner}</div>
-      <div class="results">
-        ${state.game.teams.map(team => {
-          const bid = state.bids[team.id];
-          const isWinner = winners.includes(team.id);
-          const amount = bid?.amount;
-          const timedOut = bid?.timedOut;
-          const over = !timedOut && bid?.locked && Number(amount) > Number(item.price);
-          const diff = !timedOut && bid?.locked ? Number(item.price) - Number(amount) : null;
-          const note = timedOut ? 'Timer expired' : over ? `${money(Math.abs(diff))} over` : bid?.locked ? `${money(diff)} under` : 'No bid';
-          return `
-            <div class="result-row ${isWinner ? 'winner' : ''} ${over ? 'over' : ''}">
-              <div><div class="result-name">${escapeHtml(team.name)} ${isWinner ? '⭐' : ''}</div><div class="result-note">${note}</div></div>
-              <strong>${timedOut || !bid?.locked ? '—' : money(amount)}</strong>
-              <span>${over ? '❌' : isWinner ? '🏆' : ''}</span>
-            </div>
-          `;
-        }).join('')}
-      </div>
-      <div class="controls-row">
-        ${state.roundIndex < state.game.items.length - 1
-          ? '<button class="primary big" data-action="next-round">Next Round →</button>'
-          : '<button class="primary big" data-action="finish-game">Finish Game 🏆</button>'}
+      <div class="reveal-results">
+        <div class="round-kicker">Actual Price</div>
+        <div class="reveal-price">${money(item.price)}</div>
+        <div class="winner-banner ${winners.length ? 'celebrate' : ''}">${banner}</div>
+        <div class="results">
+          ${state.game.teams.map(team => {
+            const bid = state.bids[team.id];
+            const isWinner = winners.includes(team.id);
+            const amount = bid?.amount;
+            const timedOut = bid?.timedOut;
+            const over = !timedOut && bid?.locked && Number(amount) > Number(item.price);
+            const diff = !timedOut && bid?.locked ? Number(item.price) - Number(amount) : null;
+            const note = timedOut ? 'Timer expired' : over ? `${money(Math.abs(diff))} over` : bid?.locked ? `${money(diff)} under` : 'No bid';
+            return `
+              <div class="result-row ${isWinner ? 'winner' : ''} ${over ? 'over' : ''}" style="--team-color:${team.color}">
+                <div><div class="result-name">${escapeHtml(team.name)} ${isWinner ? '⭐' : ''}</div><div class="result-note">${note}</div></div>
+                <strong>${timedOut || !bid?.locked ? '—' : money(amount)}</strong>
+                <span>${over ? '❌' : isWinner ? '🏆' : ''}</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        <div class="controls-row">
+          ${state.roundIndex < state.game.items.length - 1
+            ? '<button class="primary big game-show-button" data-action="next-round">Next Round →</button>'
+            : '<button class="primary big game-show-button" data-action="finish-game">Finish Game 🏆</button>'}
+        </div>
       </div>
     `;
   }
@@ -489,17 +554,27 @@
     const ranking = [...state.game.teams].sort((a,b) => b.score - a.score);
     const top = ranking[0]?.score ?? 0;
     const champions = ranking.filter(t => t.score === top);
+    const championText = champions.length === 1
+      ? `${escapeHtml(champions[0].name)} wins!`
+      : `It's a tie: ${champions.map(t => escapeHtml(t.name)).join(' & ')}!`;
+    const medals = ['🥇','🥈','🥉','⭐'];
     return `
       ${renderScoreboard()}
       <section class="card end-screen">
+        <div class="finale-kicker">FINAL RESULTS</div>
         <div class="trophy">🏆</div>
-        <h2>${champions.length === 1 ? `${escapeHtml(champions[0].name)} wins!` : `It's a tie!`}</h2>
-        <p class="helper">Final scores</p>
+        <h2>${championText}</h2>
+        <p class="helper">What a game! Here are the final scores.</p>
         <div class="final-ranking">
-          ${ranking.map((team, i) => `<div class="final-row"><strong>${i+1}. ${escapeHtml(team.name)}</strong><span>${team.score} point${team.score === 1 ? '' : 's'}</span></div>`).join('')}
+          ${ranking.map((team, i) => `
+            <div class="final-row ${i === 0 ? 'champion-row' : ''}" style="--team-color:${team.color}">
+              <div class="final-team"><span class="final-medal">${medals[i] || '⭐'}</span><strong>${escapeHtml(team.name)}</strong></div>
+              <span>${team.score} point${team.score === 1 ? '' : 's'}</span>
+            </div>
+          `).join('')}
         </div>
         <div class="controls-row">
-          <button class="primary big" data-action="play-again">Play Again</button>
+          <button class="primary big game-show-button" data-action="play-again">Play Again</button>
           <button data-action="back-setup">Edit Game</button>
         </div>
       </section>
@@ -560,6 +635,8 @@
     switch (action) {
       case 'toggle-sound':
         state.game.sound = !state.game.sound; saveSettings(); render(); break;
+      case 'toggle-host':
+        state.hostControlsOpen = !state.hostControlsOpen; render(); break;
       case 'add-team': addTeam(); break;
       case 'remove-team': removeTeam(e.currentTarget); break;
       case 'add-item': await addItem(); break;
@@ -707,6 +784,7 @@
     if (state.game.teams.some(t => !t.name.trim())) return showToast('Give every team a name.');
     resetGameProgress();
     state.screen = 'game';
+    state.hostControlsOpen = false;
     saveSettings();
     render();
   }
@@ -724,7 +802,7 @@
   function startTurn() {
     state.turnStatus = 'bidding';
     state.remaining = state.game.timerSeconds;
-    beep();
+    beep('start');
     render();
     stopTimer();
     state.timerId = setInterval(() => {
@@ -743,12 +821,26 @@
   function updateTimerDisplay() {
     const timer = document.querySelector('.timer');
     const bar = document.querySelector('.timer-bar > div');
+    const shell = document.querySelector('.timer-shell');
+    const panel = document.querySelector('.turn-panel');
+    const hurry = document.querySelector('.hurry-label');
+    const percent = Math.max(0, (state.remaining / state.game.timerSeconds) * 100);
     if (timer) {
       timer.textContent = state.remaining;
       timer.classList.toggle('danger', state.remaining <= 5);
       timer.classList.toggle('warning', state.remaining <= 10 && state.remaining > 5);
     }
-    if (bar) bar.style.width = `${Math.max(0, (state.remaining / state.game.timerSeconds) * 100)}%`;
+    if (shell) {
+      shell.style.setProperty('--timer-progress', percent);
+      shell.classList.toggle('danger', state.remaining <= 5);
+      shell.classList.toggle('warning', state.remaining <= 10 && state.remaining > 5);
+    }
+    if (panel) {
+      panel.classList.toggle('danger', state.remaining <= 5);
+      panel.classList.toggle('warning', state.remaining <= 10 && state.remaining > 5);
+    }
+    if (hurry) hurry.classList.toggle('show', state.remaining <= 5);
+    if (bar) bar.style.width = `${percent}%`;
   }
 
   function stopTimer() {
@@ -764,13 +856,14 @@
     stopTimer();
     const team = state.game.teams[state.turnIndex];
     state.bids[team.id] = { amount: Number(amount.toFixed(2)), locked: true, timedOut: false };
-    beep();
+    beep('lock');
     advanceTurn();
   }
 
   function timeoutBid() {
     const team = state.game.teams[state.turnIndex];
     state.bids[team.id] = { amount: null, locked: false, timedOut: true };
+    beep('timeup');
     showToast(`${team.name} ran out of time — no bid recorded.`);
     advanceTurn();
   }
@@ -788,21 +881,44 @@
 
   function revealPrice() {
     if (state.turnStatus !== 'complete') return;
+    clearRevealTimer();
+    state.turnStatus = 'revealing';
+    beep('reveal');
+    render();
+    state.revealTimerId = setTimeout(finalizeReveal, 1350);
+  }
+
+  function finalizeReveal() {
+    state.revealTimerId = null;
+    if (state.turnStatus !== 'revealing') return;
     state.turnStatus = 'revealed';
+    const item = state.game.items[state.roundIndex];
+    let winners = [];
     if (!state.scoredRound) {
-      const item = state.game.items[state.roundIndex];
-      const { winners } = getRoundResults(item);
+      winners = getRoundResults(item).winners;
       winners.forEach(id => {
         const team = state.game.teams.find(t => t.id === id);
         if (team) team.score += 1;
       });
       state.scoredRound = true;
-      if (winners.length) beep('win');
+    } else {
+      winners = getRoundResults(item).winners;
     }
     render();
+    if (winners.length) {
+      beep('win');
+      const colors = state.game.teams.filter(t => winners.includes(t.id)).map(t => t.color);
+      setTimeout(() => launchConfetti(colors), 100);
+    }
+  }
+
+  function clearRevealTimer() {
+    if (state.revealTimerId) clearTimeout(state.revealTimerId);
+    state.revealTimerId = null;
   }
 
   function nextRound() {
+    clearRevealTimer();
     state.roundIndex += 1;
     state.turnIndex = 0;
     state.turnStatus = 'ready';
@@ -814,20 +930,54 @@
 
   function finishGame() {
     stopTimer();
+    clearRevealTimer();
     state.screen = 'end';
+    state.hostControlsOpen = false;
     render();
+    const top = Math.max(...state.game.teams.map(t => t.score));
+    const colors = state.game.teams.filter(t => t.score === top).map(t => t.color);
+    setTimeout(() => launchConfetti(colors, 95), 120);
+    beep('win');
   }
 
   function playAgain() {
+    clearRevealTimer();
     resetGameProgress();
     state.screen = 'game';
+    state.hostControlsOpen = false;
     render();
   }
 
   function backToSetup() {
     stopTimer();
+    clearRevealTimer();
     state.screen = 'setup';
+    state.hostControlsOpen = false;
     render();
+  }
+
+
+  function launchConfetti(colors = [], count = 70) {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const palette = colors.length ? colors : defaultColors;
+    const layer = document.createElement('div');
+    layer.className = 'confetti-layer';
+    layer.setAttribute('aria-hidden', 'true');
+    const shapes = ['■', '●', '▲'];
+    for (let i = 0; i < count; i += 1) {
+      const piece = document.createElement('span');
+      piece.className = 'confetti-piece';
+      piece.textContent = shapes[i % shapes.length];
+      piece.style.left = `${Math.random() * 100}%`;
+      piece.style.color = palette[i % palette.length];
+      piece.style.animationDelay = `${Math.random() * .45}s`;
+      piece.style.animationDuration = `${2.2 + Math.random() * 1.6}s`;
+      piece.style.setProperty('--drift', `${-80 + Math.random() * 160}px`);
+      piece.style.fontSize = `${8 + Math.random() * 10}px`;
+      layer.appendChild(piece);
+    }
+    document.body.appendChild(layer);
+    setTimeout(() => layer.remove(), 4300);
   }
 
   async function saveCurrentGame() {
