@@ -1,0 +1,17 @@
+(() => {
+  'use strict';
+  const P=window.PC,S=P.state;
+  P.startGame=()=>{S.playItems=S.game.randomizeItems?P.shuffle(S.game.items):[...S.game.items];const ids=S.game.teams.map(t=>t.id);S.baseTeamOrder=S.game.randomizeTeams?P.shuffle(ids):ids;S.game.teams.forEach(t=>t.score=0);S.roundHistory=[];S.roundIndex=0;S.tiebreakerTeams=null;S.isTiebreaker=false;P.prepareRound();S.screen='game';S.hostControlsOpen=false;P.render();};
+  P.turnOrder=()=>{let a=[...S.baseTeamOrder];if(S.game.rotateTeams&&a.length){const shift=S.roundIndex%a.length;a=[...a.slice(shift),...a.slice(0,shift)];}if(S.tiebreakerTeams?.length)a=a.filter(id=>S.tiebreakerTeams.includes(id));return a;};
+  P.prepareRound=()=>{P.stopTimer();P.clearRevealTimer();S.turnOrder=P.turnOrder();S.turnIndex=0;S.turnStatus='ready';S.bids={};S.draftBid='';S.remaining=S.game.timerSeconds;S.paused=false;S.roundScored=false;S.pendingTiebreaker=[];};
+  P.startTurn=()=>{if(S.paused||S.turnStatus!=='ready')return;S.turnStatus='bidding';S.remaining=S.game.timerSeconds;S.draftBid='';P.beep('start');P.render();P.startTimer();};
+  P.startTimer=()=>{P.stopTimer();S.timerId=setInterval(()=>{if(S.paused)return;S.remaining--;if(S.remaining<=5&&S.remaining>0)P.beep('urgent');if(S.remaining<=0){S.remaining=0;P.stopTimer();P.timeoutBid();return;}P.updateTimer();},1000);};
+  P.stopTimer=()=>{if(S.timerId)clearInterval(S.timerId);S.timerId=null;};
+  P.updateTimer=()=>{const pct=Math.max(0,S.remaining/S.game.timerSeconds*100),timer=document.querySelector('.timer'),bar=document.querySelector('.timer-bar>div'),shell=document.querySelector('.timer-shell'),panel=document.querySelector('.turn-panel'),hurry=document.querySelector('.hurry-label');if(timer){timer.textContent=S.remaining;timer.classList.toggle('danger',S.remaining<=5);timer.classList.toggle('warning',S.remaining<=10&&S.remaining>5);}if(shell){shell.style.setProperty('--timer-progress',pct);shell.classList.toggle('danger',S.remaining<=5);shell.classList.toggle('warning',S.remaining<=10&&S.remaining>5);}if(panel){panel.classList.toggle('danger',S.remaining<=5);panel.classList.toggle('warning',S.remaining<=10&&S.remaining>5);}if(hurry)hurry.classList.toggle('show',S.remaining<=5);if(bar)bar.style.width=`${pct}%`;};
+  P.lockBid=()=>{if(S.paused||S.turnStatus!=='bidding')return;const amount=Number(document.getElementById('bid-input')?.value);if(!Number.isFinite(amount)||amount<0)return P.showToast('Enter a valid bid first.');P.stopTimer();const t=P.teamNow();S.bids[t.id]={amount:Number(amount.toFixed(2)),locked:true,timedOut:false};S.draftBid='';P.beep('lock');P.advanceTurn();};
+  P.timeoutBid=()=>{const t=P.teamNow();if(!t)return;S.bids[t.id]={amount:null,locked:false,timedOut:true};S.draftBid='';P.beep('timeup');P.showToast(`${t.name} ran out of time — no bid recorded.`);P.advanceTurn();};
+  P.hostNoBid=()=>{if(!['ready','bidding'].includes(S.turnStatus))return;P.stopTimer();const t=P.teamNow();if(!t)return;S.bids[t.id]={amount:null,locked:false,timedOut:true};S.draftBid='';P.showToast(`${t.name} marked as no bid.`);P.advanceTurn();};
+  P.advanceTurn=()=>{if(S.turnIndex<S.turnOrder.length-1){S.turnIndex++;S.turnStatus='ready';S.remaining=S.game.timerSeconds;}else S.turnStatus='complete';P.render();};
+  P.pauseGame=()=>{if(S.screen!=='game'||S.paused)return;if(S.turnStatus==='bidding'){S.draftBid=document.getElementById('bid-input')?.value||S.draftBid;P.stopTimer();}S.paused=true;P.render();};
+  P.resumeGame=()=>{if(!S.paused)return;S.paused=false;P.render();if(S.turnStatus==='bidding')P.startTimer();};
+})();
