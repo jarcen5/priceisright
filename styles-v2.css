@@ -1,0 +1,184 @@
+/* Price Challenge v2 layout additions */
+.welcome-stage,
+.ready-stage {
+  text-align: center;
+  padding: 28px 16px;
+}
+
+.welcome-stage h2,
+.ready-stage h2 {
+  font-size: clamp(2rem, 6vw, 3.4rem);
+  margin: 8px 0;
+}
+
+.welcome-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--primary-dark);
+  font-weight: 900;
+}
+
+.team-setup-card {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.team-builder-grid,
+.ready-team-grid,
+.score-editor {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.team-builder,
+.ready-team {
+  border: 2px solid var(--team-color);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.team-builder {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+.team-number {
+  grid-column: 1 / -1;
+  color: var(--team-color);
+  font-weight: 900;
+}
+
+.team-builder .field { margin: 0; }
+.team-builder .danger { grid-column: 1 / -1; justify-self: start; }
+
+.host-only-banner {
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #fff4d9;
+  color: #805500;
+  border: 1px solid #eed396;
+  font-weight: 800;
+}
+
+.option-stack,
+.history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.check-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fafbfc;
+}
+
+.check-row small { color: var(--muted); }
+
+.ready-team {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.ready-team-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--team-color);
+}
+
+.game-summary,
+.host-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin: 18px 0;
+}
+
+.game-summary span {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #f3f5f9;
+  border: 1px solid var(--border);
+}
+
+.host-controls {
+  display: grid;
+  gap: 14px;
+  align-items: stretch;
+}
+
+.score-edit-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-left: 5px solid var(--team-color);
+  border-radius: 10px;
+  background: #f7f8fb;
+}
+
+.score-edit-row > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-panel {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.history-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #f7f8fb;
+}
+
+.history-row.undone {
+  opacity: .5;
+  text-decoration: line-through;
+}
+
+.pause-state {
+  min-height: 330px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+}
+
+.rematch-box {
+  max-width: 520px;
+  margin: 26px auto 8px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fafbfc;
+  text-align: left;
+}
+
+.rematch-box .primary { width: 100%; }
+
+@media (max-width: 560px) {
+  .team-builder-grid,
+  .ready-team-grid,
+  .score-editor {
+    grid-template-columns: 1fr;
+  }
+}
