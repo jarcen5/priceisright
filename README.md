@@ -4,6 +4,20 @@ Price Challenge is a classroom-friendly browser game inspired by classic TV pric
 
 The project was iterated after live use, with improvements added to make gameplay clearer, faster, and easier for the host to manage.
 
+**[Open the live game](https://jarcen5.github.io/priceisright/)**
+
+## Screenshots
+
+### Game setup
+![Price Challenge game setup](screenshots/home.png)
+
+The host can create or load a game, configure gameplay options, manage sound, and prepare the activity before players begin.
+
+### Team setup
+![Price Challenge team setup](screenshots/team-setup.png)
+
+Teams can be created before gameplay begins, keeping item information separate from the setup flow and making the game easier to use with groups.
+
 ## Tech stack
 
 - HTML5
@@ -72,7 +86,7 @@ Then open `http://localhost:8000`.
 
 ## Deployment
 
-The project is designed for GitHub Pages and can be deployed directly from the `main` branch with no build step.
+The project is deployed with GitHub Pages directly from the `main` branch and requires no build step.
 
 ## What this project demonstrates
 
