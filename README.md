@@ -1,18 +1,16 @@
-# Price Challenge v1.1
+# Price Challenge — Interactive Team Game
 
-A classroom-friendly price guessing game inspired by classic TV game mechanics. Create 2–4 teams, add product photos and actual prices, give each team a timed private turn to submit a bid, and automatically award the point to the closest bid without going over.
+Price Challenge is a classroom-friendly browser game inspired by classic TV price-guessing mechanics. It was built for real group use and supports 2–4 teams, timed private bidding, automatic scoring, host controls, saved games, and responsive presentation on laptops, tablets, projectors, and TVs.
 
-## What's new in v1.1
+The project was iterated after live use, with improvements added to make gameplay clearer, faster, and easier for the host to manage.
 
-- Bigger, more TV-friendly score cards during gameplay
-- Circular animated countdown timer plus the original timer bar
-- Yellow warning state at 10 seconds and a dramatic red **HURRY!** state for the last 5 seconds
-- Distinct sound cues for timer start, lock-in, time-up, price reveal, and winner
-- A short dramatic “And the actual price is…” reveal before the price appears
-- Winner animations and confetti after each winning round
-- Enhanced final-results celebration and champion display
-- Collapsible **Host Controls** during gameplay so edit/sound controls stay out of the children's way
-- Reduced-motion support for people who prefer less animation
+## Tech stack
+
+- HTML5
+- CSS3
+- Vanilla JavaScript
+- IndexedDB
+- GitHub Pages
 
 ## Core features
 
@@ -20,35 +18,51 @@ A classroom-friendly price guessing game inspired by classic TV game mechanics. 
 - Team names and colors
 - Configurable per-team timer: 15, 20, 30, 45, 60, or 90 seconds
 - “Pass the device” ready screen so the timer does not run while teams switch
-- Automatic no-bid when a team runs out of time
-- Product photo upload with browser-side image resizing
 - Hidden locked bids until the reveal
+- Automatic no-bid when a team runs out of time
 - Closest-without-going-over scoring
-- Tie support: tied teams each receive one point
+- Tie support
 - Running scoreboard
+- Product photo upload with browser-side image resizing
 - Reusable saved games stored in IndexedDB
 - JSON export/import for backups and moving games between devices
 - Optional sound effects
 - Responsive layout for laptops, tablets, projectors, and TVs
+- Reduced-motion support
 - No server, database account, build step, or paid hosting required
 
-## Updating an existing GitHub Pages copy
+## Host experience
 
-If you already have Price Challenge on GitHub, replace these three files in the root of the repository with the v1.1 copies:
+Host controls are separated from the player-facing flow so the game can be run without exposing administrative options during play. The host can edit the game, manage sound, and control the experience while teams only see the information they need for their turn.
 
-- `index.html`
-- `styles.css`
-- `app.js`
+## Gameplay flow
 
-You can also replace `README.md` if you want the repository documentation updated. Your existing **Deploy from a branch → main → / (root)** GitHub Pages setting can stay exactly as it is.
+1. Create teams and add products with their actual prices.
+2. The app prompts the host to pass the device to the active team.
+3. The team starts its timer and enters a bid.
+4. The bid is locked and hidden.
+5. After every team has played, the host reveals the price.
+6. The app awards the point to the highest valid bid that does not exceed the actual price.
 
-Your saved games are stored in the browser, so updating the website files does not normally remove them. Exporting important games as JSON before a major update is still a good backup habit.
+## UX and accessibility details
 
-## Run it locally
+- Circular countdown plus timer bar
+- Warning state at 10 seconds
+- Final-five-second urgency state
+- Sound cues for important game events
+- Dramatic price reveal and winner celebration
+- Collapsible host controls
+- Reduced-motion support for users who prefer less animation
+
+## Data and privacy
+
+All game data stays in the browser unless the user exports a JSON backup. Saved games are device/browser specific and are stored with IndexedDB.
+
+## Run locally
 
 Because this is a static website, you can open `index.html` directly in most browsers.
 
-For the most reliable local test, serve the folder with a tiny local server. If Python is installed:
+For a local server:
 
 ```bash
 python -m http.server 8000
@@ -56,45 +70,10 @@ python -m http.server 8000
 
 Then open `http://localhost:8000`.
 
-## Put it on GitHub Pages
+## Deployment
 
-1. Create a new GitHub repository, for example `price-challenge`.
-2. Upload `index.html`, `styles.css`, and `app.js` to the root of the repository.
-3. Commit the files.
-4. Open the repository's **Settings**.
-5. Select **Pages** in the sidebar.
-6. Under **Build and deployment**, choose **Deploy from a branch**.
-7. Choose your main branch (usually `main`) and the `/ (root)` folder.
-8. Save.
+The project is designed for GitHub Pages and can be deployed directly from the `main` branch with no build step.
 
-GitHub will provide the public Pages URL after deployment.
+## What this project demonstrates
 
-## How the timer works
-
-Each team gets its own full countdown.
-
-1. The app displays “Pass to Team X.”
-2. The team presses **Start My Timer** when they are ready.
-3. Their bid field appears and the countdown begins.
-4. They enter a price and press **Lock In**.
-5. Their bid is hidden and the app moves to the next team.
-6. If the timer reaches zero, that team receives **No Bid** for the round.
-7. After all teams are done, the host presses **Reveal Price**.
-
-The timer changes to a warning style with 10 seconds remaining, then enters a more noticeable final-five-seconds state.
-
-## Host Controls
-
-During gameplay, setup controls are hidden behind the **Host Controls** button in the top-right corner. Opening the host panel gives you access to the sound toggle and **Edit Game** without leaving those controls exposed all the time.
-
-## Data/privacy notes
-
-All game data stays in the browser unless you export a JSON file. There is no login and nothing is sent to a server by this app.
-
-Saved browser games are device/browser specific. Use **Export** if you want a backup or want to move a game to another computer.
-
-## Game rule
-
-The winner is the highest valid bid that is less than or equal to the actual price. Any bid over the actual price is disqualified for that round.
-
-If multiple teams submit the same winning bid, each tied team receives one point.
+This project demonstrates JavaScript state management, browser storage, file/image handling, responsive UI design, accessibility considerations, scoring/business logic, user-centered iteration, and deployment of a static web application for real users.
